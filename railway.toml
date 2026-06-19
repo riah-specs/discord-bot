@@ -2,5 +2,5 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "node index.js"
+startCommand = "node deploy-commands.js && node index.js"
 restartPolicyType = "always"
