@@ -1,4 +1,7 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+
+// Tracks how many times each user has been nuked (resets on bot restart)
+const nukeCount = new Map();
 
 const commands = [
   // --- KICK ---
@@ -158,7 +161,67 @@ const commands = [
         }]
       });
     }
-  }
+  },
+
+  // --- NUKE (prank) ---
+  {
+    data: new SlashCommandBuilder()
+      .setName('nuke')
+      .setDescription('☢️ Nuke someone (prank command)')
+      .addUserOption(o => o.setName('user').setDescription('Who to nuke').setRequired(true)),
+    async execute(interaction) {
+      const target = interaction.options.getUser('user');
+
+      // Don't let someone nuke themselves (or make it funny)
+      if (target.id === interaction.user.id) {
+        return interaction.reply({
+          embeds: [new EmbedBuilder()
+            .setTitle('☢️ Self-Destruct Initiated?')
+            .setDescription(`${interaction.user}, you tried to nuke yourself... bro are you okay 💀`)
+            .setColor(0xf1c40f)
+            .setFooter({ text: 'Seek help.' })],
+        });
+      }
+
+      const count = (nukeCount.get(target.id) || 0) + 1;
+      nukeCount.set(target.id, count);
+
+      if (count === 1) {
+        // First nuke — warning
+        await interaction.reply({
+          content: `<@${target.id}>`,
+          embeds: [new EmbedBuilder()
+            .setTitle('☢️ YOU HAVE BEEN OFFICIALLY NUKED')
+            .setDescription(
+              `**${target.displayName}** has been nuked by **${interaction.member.displayName}**.\n\n` +
+              `⚠️ If you get nuked one more time, I am forced to use **Hollow Purple**. 🟣\n\n` +
+              `*Consider this your only warning.*`
+            )
+            .setColor(0xe74c3c)
+            .setThumbnail('https://media.tenor.com/lRSGX_N-h4YAAAAC/gojo-satoru-jujutsu-kaisen.gif')
+            .setFooter({ text: `Nuked by ${interaction.user.tag} • Strike 1/2` })
+            .setTimestamp()],
+        });
+      } else {
+        // Second nuke and beyond — Hollow Purple activated
+        const strike = count >= 3 ? `☠️ Strike ${count} — There is no coming back.` : `🟣 Strike ${count}/2 — Hollow Purple has been unleashed.`;
+        await interaction.reply({
+          content: `<@${target.id}>`,
+          embeds: [new EmbedBuilder()
+            .setTitle('🟣 HOLLOW PURPLE ACTIVATED')
+            .setDescription(
+              `**${target.displayName}** has been obliterated by **Satoru Gojo** himself.\n\n` +
+              `> *"Throughout Heaven and Earth, I alone am the honored one."*\n\n` +
+              `${strike}`
+            )
+            .setColor(0x9b59b6)
+            .setImage('https://media.tenor.com/RP0LpE3kbFYAAAAC/hollow-purple-gojo.gif')
+            .setFooter({ text: `Nuked by ${interaction.user.tag}` })
+            .setTimestamp()],
+        });
+      }
+    }
+  },
 ];
 
 module.exports = { commands };
